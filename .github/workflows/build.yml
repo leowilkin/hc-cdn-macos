@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build universal app
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Stamp version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" Resources/Info.plist
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: ./build.sh --universal
+
+      - name: Verify both architectures are present
+        run: |
+          lipo -info "build/Hack Club CDN.app/Contents/MacOS/HackClubCDN"
+          lipo -info "build/Hack Club CDN.app/Contents/MacOS/HackClubCDN" | grep -q x86_64
+          lipo -info "build/Hack Club CDN.app/Contents/MacOS/HackClubCDN" | grep -q arm64
+          codesign --verify --strict --verbose=2 "build/Hack Club CDN.app"
+
+      - name: Package
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            "build/Hack Club CDN.app" "Hack-Club-CDN.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hack-Club-CDN
+          path: Hack-Club-CDN.zip
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "Hack-Club-CDN.zip" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file - <<'NOTES'
+          Universal (Apple Silicon + Intel) build, ad-hoc signed and **not notarised**.
+
+          Download `Hack-Club-CDN.zip`, unzip it, move **Hack Club CDN.app** to `/Applications`, then:
+
+          ```sh
+          xattr -dr com.apple.quarantine "/Applications/Hack Club CDN.app"
+          open "/Applications/Hack Club CDN.app"
+          ```
+
+          Finally, tick **Upload to Hack Club CDN** under
+          System Settings → Keyboard → Keyboard Shortcuts → Services → Files and Folders.
+          NOTES
