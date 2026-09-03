@@ -16,7 +16,7 @@ jobs:
     runs-on: macos-15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Show toolchain
         run: swift --version
@@ -44,7 +44,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent \
             "build/Hack Club CDN.app" "Hack-Club-CDN.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: Hack-Club-CDN
           path: Hack-Club-CDN.zip
