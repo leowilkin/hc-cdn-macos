@@ -7,6 +7,9 @@ A small, native AppKit + SwiftUI app — no Electron, no dependencies, one
 `swiftc` invocation to build. It talks to the CDN's
 [v4 API](https://cdn.hackclub.com/openapi.json).
 
+## Tools
+This was a one-shot with Anthropic's Opus 5 (1M), fully done in 20 minutes. I'm very impressed...!
+
 <br>
 
 ## Install
